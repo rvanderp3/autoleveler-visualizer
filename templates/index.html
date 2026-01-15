@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoLeveler Visualizer</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #eee;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #00d9ff;
+        }
+        #plot {
+            width: 100%;
+            height: 700px;
+            background: #16213e;
+            border-radius: 10px;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        label {
+            font-weight: bold;
+        }
+        select {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: none;
+            background: #0f3460;
+            color: #eee;
+            cursor: pointer;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-box {
+            background: #0f3460;
+            padding: 15px 25px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 120px;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #00d9ff;
+        }
+        .mode-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .mode-tab {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 5px;
+            background: #0f3460;
+            color: #eee;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.2s;
+        }
+        .mode-tab:hover {
+            background: #1a4a7a;
+        }
+        .mode-tab.active {
+            background: #00d9ff;
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+        .compare-controls {
+            display: none;
+        }
+        .compare-controls.visible {
+            display: flex;
+        }
+        .single-controls.hidden {
+            display: none;
+        }
+        .compare-stats {
+            display: none;
+        }
+        .compare-stats.visible {
+            display: flex;
+        }
+        .single-stats.hidden {
+            display: none;
+        }
+        .stat-box.highlight {
+            background: #1a4a7a;
+            border: 2px solid #00d9ff;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #00d9ff;
+        }
+        .stat-box.warning {
+            background: #4a3a1a;
+            border: 2px solid #ffaa00;
+        }
+        .stat-box.warning .stat-value {
+            color: #ffaa00;
+        }
+        .upload-btn {
+            padding: 8px 16px;
+            border: 2px dashed #0f3460;
+            border-radius: 5px;
+            background: transparent;
+            color: #00d9ff;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        .upload-btn:hover {
+            border-color: #00d9ff;
+            background: #0f3460;
+        }
+        .file-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AutoLeveler Visualizer</h1>
+
+        <div class="mode-tabs">
+            <button class="mode-tab active" id="singleModeBtn">Single File</button>
+            <button class="mode-tab" id="compareModeBtn">Compare Files</button>
+        </div>
+
+        <div class="controls single-controls" id="singleControls">
+            <div class="control-group">
+                <label for="fileSelect">File:</label>
+                <select id="fileSelect">
+                    <option value="">Loading...</option>
+                </select>
+                <input type="file" id="singleFileInput" class="file-input" accept=".xyz">
+                <button class="upload-btn" id="singleUploadBtn">Browse...</button>
+            </div>
+            <div class="control-group">
+                <label for="colorscale">Color Scale:</label>
+                <select id="colorscale">
+                    <option value="Viridis">Viridis</option>
+                    <option value="Jet">Jet</option>
+                    <option value="Hot">Hot</option>
+                    <option value="Earth">Earth</option>
+                    <option value="Electric">Electric</option>
+                    <option value="Bluered">Blue-Red</option>
+                    <option value="Portland">Portland</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="plotType">View Type:</label>
+                <select id="plotType">
+                    <option value="surface">3D Surface</option>
+                    <option value="heatmap">2D Heatmap</option>
+                    <option value="contour">Contour</option>
+                </select>
+            </div>
+            <div class="control-group checkbox-group">
+                <input type="checkbox" id="singleFilterOutliers">
+                <label for="singleFilterOutliers">Filter Outliers (1 StdDev)</label>
+            </div>
+        </div>
+
+        <div class="controls compare-controls" id="compareControls">
+            <div class="control-group">
+                <label for="file1Select">File 1:</label>
+                <select id="file1Select">
+                    <option value="">Loading...</option>
+                </select>
+                <input type="file" id="file1Input" class="file-input" accept=".xyz">
+                <button class="upload-btn" id="file1UploadBtn">Browse...</button>
+            </div>
+            <div class="control-group">
+                <label for="file2Select">File 2:</label>
+                <select id="file2Select">
+                    <option value="">Loading...</option>
+                </select>
+                <input type="file" id="file2Input" class="file-input" accept=".xyz">
+                <button class="upload-btn" id="file2UploadBtn">Browse...</button>
+            </div>
+            <div class="control-group">
+                <label for="compareColorscale">Color Scale:</label>
+                <select id="compareColorscale">
+                    <option value="RdBu">Red-Blue</option>
+                    <option value="Bluered">Blue-Red</option>
+                    <option value="Viridis">Viridis</option>
+                    <option value="Jet">Jet</option>
+                    <option value="Hot">Hot</option>
+                    <option value="Portland">Portland</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="comparePlotType">View Type:</label>
+                <select id="comparePlotType">
+                    <option value="heatmap">2D Heatmap</option>
+                    <option value="surface">3D Surface</option>
+                    <option value="contour">Contour</option>
+                </select>
+            </div>
+            <div class="control-group checkbox-group">
+                <input type="checkbox" id="filterOutliers">
+                <label for="filterOutliers">Filter Outliers (1 StdDev)</label>
+            </div>
+        </div>
+
+        <div id="plot"></div>
+
+        <div class="stats single-stats" id="singleStats">
+            <div class="stat-box">
+                <div class="stat-label">Min Height</div>
+                <div class="stat-value" id="minZ">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Max Height</div>
+                <div class="stat-value" id="maxZ">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Height Range</div>
+                <div class="stat-value" id="rangeZ">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Points</div>
+                <div class="stat-value" id="totalPoints">-</div>
+            </div>
+            <div class="stat-box warning" id="singleOutliersBox" style="display: none;">
+                <div class="stat-label">Outliers Removed</div>
+                <div class="stat-value" id="singleOutliersRemoved">-</div>
+            </div>
+        </div>
+
+        <div class="stats compare-stats" id="compareStats">
+            <div class="stat-box highlight">
+                <div class="stat-label">Min Diff</div>
+                <div class="stat-value" id="minDiff">-</div>
+            </div>
+            <div class="stat-box highlight">
+                <div class="stat-label">Max Diff</div>
+                <div class="stat-value" id="maxDiff">-</div>
+            </div>
+            <div class="stat-box highlight">
+                <div class="stat-label">Mean Diff</div>
+                <div class="stat-value" id="meanDiff">-</div>
+            </div>
+            <div class="stat-box highlight">
+                <div class="stat-label">Mean Abs Diff</div>
+                <div class="stat-value" id="meanAbsDiff">-</div>
+            </div>
+            <div class="stat-box highlight">
+                <div class="stat-label">RMS</div>
+                <div class="stat-value" id="rmsDiff">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Matched Points</div>
+                <div class="stat-value" id="matchedPoints">-</div>
+            </div>
+            <div class="stat-box warning" id="outliersBox" style="display: none;">
+                <div class="stat-label">Outliers Removed</div>
+                <div class="stat-value" id="outliersRemoved">-</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let globalData = null;
+        let compareData = null;
+        let currentFile = '';
+        let file1 = '';
+        let file2 = '';
+        let mode = 'single'; // 'single' or 'compare'
+        let fileList = [];
+
+        async function loadFileList() {
+            const response = await fetch('/files');
+            fileList = await response.json();
+
+            // Populate single file selector
+            const select = document.getElementById('fileSelect');
+            select.innerHTML = '';
+            fileList.forEach((file, index) => {
+                const option = document.createElement('option');
+                option.value = file;
+                option.textContent = file;
+                select.appendChild(option);
+                if (index === 0) currentFile = file;
+            });
+
+            // Populate compare file selectors
+            const select1 = document.getElementById('file1Select');
+            const select2 = document.getElementById('file2Select');
+            select1.innerHTML = '';
+            select2.innerHTML = '';
+
+            fileList.forEach((file, index) => {
+                const option1 = document.createElement('option');
+                option1.value = file;
+                option1.textContent = file;
+                select1.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = file;
+                option2.textContent = file;
+                select2.appendChild(option2);
+
+                if (index === 0) file1 = file;
+                if (index === 1) file2 = file;
+                if (index === 0 && fileList.length === 1) file2 = file;
+            });
+
+            if (fileList.length > 1) {
+                select2.value = fileList[1];
+            }
+
+            if (fileList.length > 0) {
+                loadData();
+            }
+        }
+
+        async function loadData() {
+            const filterOutliers = document.getElementById('singleFilterOutliers').checked;
+            const response = await fetch(`/data?file=${encodeURIComponent(currentFile)}&filter_outliers=${filterOutliers}`);
+            globalData = await response.json();
+
+            if (globalData.error) {
+                alert(globalData.error);
+                return;
+            }
+
+            if (mode === 'single') {
+                updateStats();
+                renderPlot();
+            }
+        }
+
+        async function loadCompareData() {
+            if (!file1 || !file2) return;
+
+            const filterOutliers = document.getElementById('filterOutliers').checked;
+            const response = await fetch(`/compare?file1=${encodeURIComponent(file1)}&file2=${encodeURIComponent(file2)}&filter_outliers=${filterOutliers}`);
+            compareData = await response.json();
+
+            if (compareData.error) {
+                alert(compareData.error);
+                return;
+            }
+
+            updateCompareStats();
+            renderComparePlot();
+        }
+
+        function updateStats() {
+            const zValues = globalData.points.map(p => p.z);
+            const minZ = Math.min(...zValues);
+            const maxZ = Math.max(...zValues);
+
+            document.getElementById('minZ').textContent = minZ.toFixed(3);
+            document.getElementById('maxZ').textContent = maxZ.toFixed(3);
+            document.getElementById('rangeZ').textContent = (maxZ - minZ).toFixed(3);
+            document.getElementById('totalPoints').textContent = globalData.points.length;
+
+            // Show/hide outliers box for single view
+            const outliersBox = document.getElementById('singleOutliersBox');
+            if (globalData.stats && globalData.stats.outliers_removed > 0) {
+                outliersBox.style.display = 'block';
+                document.getElementById('singleOutliersRemoved').textContent = globalData.stats.outliers_removed;
+            } else {
+                outliersBox.style.display = 'none';
+            }
+        }
+
+        function updateCompareStats() {
+            const stats = compareData.stats;
+            document.getElementById('minDiff').textContent = stats.min.toFixed(4);
+            document.getElementById('maxDiff').textContent = stats.max.toFixed(4);
+            document.getElementById('meanDiff').textContent = stats.mean.toFixed(4);
+            document.getElementById('meanAbsDiff').textContent = stats.mean_abs.toFixed(4);
+            document.getElementById('rmsDiff').textContent = stats.rms.toFixed(4);
+            document.getElementById('matchedPoints').textContent = stats.total_points;
+
+            // Show/hide outliers box
+            const outliersBox = document.getElementById('outliersBox');
+            if (stats.outliers_removed > 0) {
+                outliersBox.style.display = 'block';
+                document.getElementById('outliersRemoved').textContent = stats.outliers_removed;
+            } else {
+                outliersBox.style.display = 'none';
+            }
+        }
+
+        function renderPlot() {
+            const colorscale = document.getElementById('colorscale').value;
+            const plotType = document.getElementById('plotType').value;
+
+            let traces = [];
+            let layout = {
+                paper_bgcolor: '#16213e',
+                plot_bgcolor: '#16213e',
+                font: { color: '#eee' },
+                margin: { l: 60, r: 60, t: 40, b: 60 }
+            };
+
+            if (plotType === 'surface') {
+                traces = [{
+                    type: 'surface',
+                    x: globalData.x,
+                    y: globalData.y,
+                    z: globalData.z,
+                    colorscale: colorscale,
+                    colorbar: {
+                        title: 'Height',
+                        titleside: 'right'
+                    }
+                }];
+                layout.scene = {
+                    xaxis: { title: 'X', color: '#eee', gridcolor: '#333' },
+                    yaxis: { title: 'Y', color: '#eee', gridcolor: '#333' },
+                    zaxis: { title: 'Height (Z)', color: '#eee', gridcolor: '#333' },
+                    bgcolor: '#16213e'
+                };
+            } else if (plotType === 'heatmap') {
+                traces = [{
+                    type: 'heatmap',
+                    x: globalData.x,
+                    y: globalData.y,
+                    z: globalData.z,
+                    colorscale: colorscale,
+                    colorbar: {
+                        title: 'Height'
+                    }
+                }];
+                layout.xaxis = { title: 'X', color: '#eee', gridcolor: '#333', autorange: true };
+                layout.yaxis = { title: 'Y', color: '#eee', gridcolor: '#333', autorange: true, scaleanchor: 'x' };
+            } else if (plotType === 'contour') {
+                traces = [{
+                    type: 'contour',
+                    x: globalData.x,
+                    y: globalData.y,
+                    z: globalData.z,
+                    colorscale: colorscale,
+                    contours: {
+                        coloring: 'heatmap',
+                        showlabels: true
+                    },
+                    colorbar: {
+                        title: 'Height'
+                    }
+                }];
+                layout.xaxis = { title: 'X', color: '#eee', gridcolor: '#333', autorange: true };
+                layout.yaxis = { title: 'Y', color: '#eee', gridcolor: '#333', autorange: true, scaleanchor: 'x' };
+            }
+
+            Plotly.newPlot('plot', traces, layout, { responsive: true });
+        }
+
+        function renderComparePlot() {
+            const colorscale = document.getElementById('compareColorscale').value;
+            const plotType = document.getElementById('comparePlotType').value;
+
+            let traces = [];
+            let layout = {
+                paper_bgcolor: '#16213e',
+                plot_bgcolor: '#16213e',
+                font: { color: '#eee' },
+                margin: { l: 60, r: 60, t: 40, b: 60 },
+                title: {
+                    text: `Difference: ${file1} - ${file2}`,
+                    font: { color: '#00d9ff', size: 16 }
+                }
+            };
+
+            // Center the colorscale around zero for diverging colors
+            const zValues = compareData.z.flat();
+            const maxAbs = Math.max(Math.abs(Math.min(...zValues)), Math.abs(Math.max(...zValues)));
+
+            if (plotType === 'surface') {
+                traces = [{
+                    type: 'surface',
+                    x: compareData.x,
+                    y: compareData.y,
+                    z: compareData.z,
+                    colorscale: colorscale,
+                    zmid: 0,
+                    colorbar: {
+                        title: 'Difference',
+                        titleside: 'right'
+                    }
+                }];
+                layout.scene = {
+                    xaxis: { title: 'X', color: '#eee', gridcolor: '#333' },
+                    yaxis: { title: 'Y', color: '#eee', gridcolor: '#333' },
+                    zaxis: { title: 'Difference', color: '#eee', gridcolor: '#333' },
+                    bgcolor: '#16213e'
+                };
+            } else if (plotType === 'heatmap') {
+                traces = [{
+                    type: 'heatmap',
+                    x: compareData.x,
+                    y: compareData.y,
+                    z: compareData.z,
+                    colorscale: colorscale,
+                    zmid: 0,
+                    zmin: -maxAbs,
+                    zmax: maxAbs,
+                    colorbar: {
+                        title: 'Difference'
+                    }
+                }];
+                layout.xaxis = { title: 'X', color: '#eee', gridcolor: '#333', autorange: true };
+                layout.yaxis = { title: 'Y', color: '#eee', gridcolor: '#333', autorange: true, scaleanchor: 'x' };
+            } else if (plotType === 'contour') {
+                traces = [{
+                    type: 'contour',
+                    x: compareData.x,
+                    y: compareData.y,
+                    z: compareData.z,
+                    colorscale: colorscale,
+                    zmid: 0,
+                    contours: {
+                        coloring: 'heatmap',
+                        showlabels: true
+                    },
+                    colorbar: {
+                        title: 'Difference'
+                    }
+                }];
+                layout.xaxis = { title: 'X', color: '#eee', gridcolor: '#333', autorange: true };
+                layout.yaxis = { title: 'Y', color: '#eee', gridcolor: '#333', autorange: true, scaleanchor: 'x' };
+            }
+
+            Plotly.newPlot('plot', traces, layout, { responsive: true });
+        }
+
+        function setMode(newMode) {
+            mode = newMode;
+
+            // Update tab buttons
+            document.getElementById('singleModeBtn').classList.toggle('active', mode === 'single');
+            document.getElementById('compareModeBtn').classList.toggle('active', mode === 'compare');
+
+            // Toggle controls visibility
+            document.getElementById('singleControls').classList.toggle('hidden', mode === 'compare');
+            document.getElementById('compareControls').classList.toggle('visible', mode === 'compare');
+
+            // Toggle stats visibility
+            document.getElementById('singleStats').classList.toggle('hidden', mode === 'compare');
+            document.getElementById('compareStats').classList.toggle('visible', mode === 'compare');
+
+            // Load appropriate data
+            if (mode === 'single') {
+                if (globalData) {
+                    updateStats();
+                    renderPlot();
+                }
+            } else {
+                loadCompareData();
+            }
+        }
+
+        // Event listeners
+        document.getElementById('singleModeBtn').addEventListener('click', () => setMode('single'));
+        document.getElementById('compareModeBtn').addEventListener('click', () => setMode('compare'));
+
+        document.getElementById('fileSelect').addEventListener('change', (e) => {
+            currentFile = e.target.value;
+            loadData();
+        });
+
+        document.getElementById('file1Select').addEventListener('change', (e) => {
+            file1 = e.target.value;
+            loadCompareData();
+        });
+
+        document.getElementById('file2Select').addEventListener('change', (e) => {
+            file2 = e.target.value;
+            loadCompareData();
+        });
+
+        document.getElementById('colorscale').addEventListener('change', renderPlot);
+        document.getElementById('plotType').addEventListener('change', renderPlot);
+        document.getElementById('singleFilterOutliers').addEventListener('change', loadData);
+
+        document.getElementById('compareColorscale').addEventListener('change', renderComparePlot);
+        document.getElementById('comparePlotType').addEventListener('change', renderComparePlot);
+        document.getElementById('filterOutliers').addEventListener('change', loadCompareData);
+
+        // File upload handling
+        async function uploadFile(file, targetSelect, setFileCallback) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.error) {
+                    alert(result.error);
+                    return;
+                }
+
+                // Refresh file list and select the uploaded file
+                await loadFileList();
+                targetSelect.value = result.filename;
+                setFileCallback(result.filename);
+            } catch (error) {
+                alert('Upload failed: ' + error.message);
+            }
+        }
+
+        // Single file upload
+        document.getElementById('singleUploadBtn').addEventListener('click', () => {
+            document.getElementById('singleFileInput').click();
+        });
+        document.getElementById('singleFileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFile(
+                    e.target.files[0],
+                    document.getElementById('fileSelect'),
+                    (filename) => { currentFile = filename; loadData(); }
+                );
+            }
+        });
+
+        // Compare file 1 upload
+        document.getElementById('file1UploadBtn').addEventListener('click', () => {
+            document.getElementById('file1Input').click();
+        });
+        document.getElementById('file1Input').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFile(
+                    e.target.files[0],
+                    document.getElementById('file1Select'),
+                    (filename) => { file1 = filename; loadCompareData(); }
+                );
+            }
+        });
+
+        // Compare file 2 upload
+        document.getElementById('file2UploadBtn').addEventListener('click', () => {
+            document.getElementById('file2Input').click();
+        });
+        document.getElementById('file2Input').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFile(
+                    e.target.files[0],
+                    document.getElementById('file2Select'),
+                    (filename) => { file2 = filename; loadCompareData(); }
+                );
+            }
+        });
+
+        loadFileList();
+    </script>
+</body>
+</html>
