@@ -1,6 +1,8 @@
 # AutoLeveler Visualizer
 
-A Flask-based web application for visualizing and comparing autoleveling probe data from [Universal Gcode Sender (UGS)](https://winder.github.io/ugs_website/).
+A web application for visualizing and comparing autoleveling probe data from [Universal Gcode Sender (UGS)](https://winder.github.io/ugs_website/).
+
+**[Try it online](https://YOUR_USERNAME.github.io/xyz_viewer/)** - No installation required!
 
 ## Overview
 
@@ -24,12 +26,19 @@ When using UGS's autoleveling feature for CNC routing, the software probes your 
 - **Statistics Display**: View min, max, range, RMS, and other metrics
 - **Multiple Color Scales**: Viridis, Jet, Hot, Earth, and more
 
-## Requirements
+## Usage
 
-- Python 3.10+
-- Flask
+### Online Version (Recommended)
 
-## Installation
+Simply visit the [GitHub Pages site](https://YOUR_USERNAME.github.io/xyz_viewer/) and:
+1. Select a sample file from the dropdown, or
+2. Click "Browse..." to load your own .xyz files
+
+Your files are processed entirely in your browser - nothing is uploaded to any server.
+
+### Local Development
+
+If you want to run the Flask version locally:
 
 1. Install Python from https://www.python.org/downloads/
 
@@ -38,18 +47,12 @@ When using UGS's autoleveling feature for CNC routing, the software probes your 
    pip install flask
    ```
 
-## Usage
-
-1. Run the application:
+3. Run the application:
    ```bash
    python app.py
    ```
 
-2. Open http://localhost:5000 in your browser
-
-3. Either:
-   - Place `.xyz` files in the application directory and select from the dropdown
-   - Click "Browse..." to upload files from anywhere on your computer
+4. Open http://localhost:5000 in your browser
 
 ## UGS Autoleveling Workflow
 
