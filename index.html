@@ -246,6 +246,18 @@
                 <input type="checkbox" id="singleFilterOutliers">
                 <label for="singleFilterOutliers">Filter Outliers (1 StdDev)</label>
             </div>
+            <div class="control-group">
+                <label for="smoothing">Smoothing:</label>
+                <select id="smoothing">
+                    <option value="none">None</option>
+                    <option value="gaussian-1">Gaussian (Light)</option>
+                    <option value="gaussian-2">Gaussian (Medium)</option>
+                    <option value="gaussian-3">Gaussian (Strong)</option>
+                    <option value="median-1">Median (Light)</option>
+                    <option value="median-2">Median (Medium)</option>
+                    <option value="median-3">Median (Strong)</option>
+                </select>
+            </div>
         </div>
 
         <div class="controls compare-controls" id="compareControls">
@@ -295,6 +307,18 @@
             <div class="control-group checkbox-group">
                 <input type="checkbox" id="filterOutliers">
                 <label for="filterOutliers">Filter Outliers (1 StdDev)</label>
+            </div>
+            <div class="control-group">
+                <label for="compareSmoothing">Smoothing:</label>
+                <select id="compareSmoothing">
+                    <option value="none">None</option>
+                    <option value="gaussian-1">Gaussian (Light)</option>
+                    <option value="gaussian-2">Gaussian (Medium)</option>
+                    <option value="gaussian-3">Gaussian (Strong)</option>
+                    <option value="median-1">Median (Light)</option>
+                    <option value="median-2">Median (Medium)</option>
+                    <option value="median-3">Median (Strong)</option>
+                </select>
             </div>
         </div>
 
@@ -368,6 +392,121 @@
         let singleFileData = null;
         let file1Data = null;
         let file2Data = null;
+
+        // Smoothing functions
+        function applyGaussianSmoothing(zGrid, radius) {
+            const rows = zGrid.length;
+            const cols = zGrid[0].length;
+            const result = [];
+
+            // Create Gaussian kernel
+            const kernelSize = radius * 2 + 1;
+            const sigma = radius / 2;
+            const kernel = [];
+            let kernelSum = 0;
+
+            for (let i = 0; i < kernelSize; i++) {
+                kernel[i] = [];
+                for (let j = 0; j < kernelSize; j++) {
+                    const x = i - radius;
+                    const y = j - radius;
+                    const value = Math.exp(-(x * x + y * y) / (2 * sigma * sigma));
+                    kernel[i][j] = value;
+                    kernelSum += value;
+                }
+            }
+
+            // Normalize kernel
+            for (let i = 0; i < kernelSize; i++) {
+                for (let j = 0; j < kernelSize; j++) {
+                    kernel[i][j] /= kernelSum;
+                }
+            }
+
+            // Apply convolution
+            for (let row = 0; row < rows; row++) {
+                result[row] = [];
+                for (let col = 0; col < cols; col++) {
+                    if (zGrid[row][col] === null) {
+                        result[row][col] = null;
+                        continue;
+                    }
+
+                    let sum = 0;
+                    let weightSum = 0;
+
+                    for (let ki = 0; ki < kernelSize; ki++) {
+                        for (let kj = 0; kj < kernelSize; kj++) {
+                            const r = row + ki - radius;
+                            const c = col + kj - radius;
+
+                            if (r >= 0 && r < rows && c >= 0 && c < cols && zGrid[r][c] !== null) {
+                                sum += zGrid[r][c] * kernel[ki][kj];
+                                weightSum += kernel[ki][kj];
+                            }
+                        }
+                    }
+
+                    result[row][col] = weightSum > 0 ? sum / weightSum : zGrid[row][col];
+                }
+            }
+
+            return result;
+        }
+
+        function applyMedianSmoothing(zGrid, radius) {
+            const rows = zGrid.length;
+            const cols = zGrid[0].length;
+            const result = [];
+
+            for (let row = 0; row < rows; row++) {
+                result[row] = [];
+                for (let col = 0; col < cols; col++) {
+                    if (zGrid[row][col] === null) {
+                        result[row][col] = null;
+                        continue;
+                    }
+
+                    const neighbors = [];
+
+                    for (let ki = -radius; ki <= radius; ki++) {
+                        for (let kj = -radius; kj <= radius; kj++) {
+                            const r = row + ki;
+                            const c = col + kj;
+
+                            if (r >= 0 && r < rows && c >= 0 && c < cols && zGrid[r][c] !== null) {
+                                neighbors.push(zGrid[r][c]);
+                            }
+                        }
+                    }
+
+                    neighbors.sort((a, b) => a - b);
+                    const mid = Math.floor(neighbors.length / 2);
+                    result[row][col] = neighbors.length % 2 === 0
+                        ? (neighbors[mid - 1] + neighbors[mid]) / 2
+                        : neighbors[mid];
+                }
+            }
+
+            return result;
+        }
+
+        function applySmoothing(zGrid, smoothingType) {
+            if (smoothingType === 'none' || !smoothingType) {
+                return zGrid;
+            }
+
+            const [method, level] = smoothingType.split('-');
+            const radius = parseInt(level) || 1;
+
+            if (method === 'gaussian') {
+                return applyGaussianSmoothing(zGrid, radius);
+            } else if (method === 'median') {
+                return applyMedianSmoothing(zGrid, radius);
+            }
+
+            return zGrid;
+        }
 
         // Parse XYZ file content
         function parseXYZContent(content) {
@@ -657,6 +796,10 @@
 
             const colorscale = document.getElementById('colorscale').value;
             const plotType = document.getElementById('plotType').value;
+            const smoothingType = document.getElementById('smoothing').value;
+
+            // Apply smoothing to z grid
+            const zData = applySmoothing(globalData.z, smoothingType);
 
             let traces = [];
             let layout = {
@@ -671,7 +814,7 @@
                     type: 'surface',
                     x: globalData.x,
                     y: globalData.y,
-                    z: globalData.z,
+                    z: zData,
                     colorscale: colorscale,
                     colorbar: {
                         title: 'Height',

@@ -2,7 +2,7 @@
 
 A web application for visualizing and comparing autoleveling probe data from [Universal Gcode Sender (UGS)](https://winder.github.io/ugs_website/).
 
-**[Try it online](https://YOUR_USERNAME.github.io/xyz_viewer/)** - No installation required!
+**[Try it online](https://autoleveler.vanderlab.net/)** - No installation required!
 
 ## Overview
 
@@ -113,3 +113,6 @@ The `samples/` folder contains real probe data from a spoilboard at various phas
 - **Before/After Comparison**: Compare probe data before and after a surfacing operation to verify improvement
 - **Material Inspection**: Check workpiece flatness before machining
 - **Troubleshooting**: Identify probe errors or measurement issues
+
+
+This application was built with the help of Claude.
