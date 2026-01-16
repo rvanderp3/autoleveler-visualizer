@@ -832,7 +832,7 @@
                     type: 'heatmap',
                     x: globalData.x,
                     y: globalData.y,
-                    z: globalData.z,
+                    z: zData,
                     colorscale: colorscale,
                     colorbar: {
                         title: 'Height'
@@ -845,7 +845,7 @@
                     type: 'contour',
                     x: globalData.x,
                     y: globalData.y,
-                    z: globalData.z,
+                    z: zData,
                     colorscale: colorscale,
                     contours: {
                         coloring: 'heatmap',
@@ -867,6 +867,10 @@
 
             const colorscale = document.getElementById('compareColorscale').value;
             const plotType = document.getElementById('comparePlotType').value;
+            const smoothingType = document.getElementById('compareSmoothing').value;
+
+            // Apply smoothing to z grid
+            const zData = applySmoothing(compareData.z, smoothingType);
 
             let traces = [];
             let layout = {
@@ -881,7 +885,7 @@
             };
 
             // Center the colorscale around zero for diverging colors
-            const zValues = compareData.z.flat().filter(v => v !== null);
+            const zValues = zData.flat().filter(v => v !== null);
             const maxAbs = Math.max(Math.abs(Math.min(...zValues)), Math.abs(Math.max(...zValues)));
 
             if (plotType === 'surface') {
@@ -889,7 +893,7 @@
                     type: 'surface',
                     x: compareData.x,
                     y: compareData.y,
-                    z: compareData.z,
+                    z: zData,
                     colorscale: colorscale,
                     zmid: 0,
                     colorbar: {
@@ -908,7 +912,7 @@
                     type: 'heatmap',
                     x: compareData.x,
                     y: compareData.y,
-                    z: compareData.z,
+                    z: zData,
                     colorscale: colorscale,
                     zmid: 0,
                     zmin: -maxAbs,
@@ -924,7 +928,7 @@
                     type: 'contour',
                     x: compareData.x,
                     y: compareData.y,
-                    z: compareData.z,
+                    z: zData,
                     colorscale: colorscale,
                     zmid: 0,
                     contours: {
@@ -1012,10 +1016,12 @@
         document.getElementById('colorscale').addEventListener('change', renderPlot);
         document.getElementById('plotType').addEventListener('change', renderPlot);
         document.getElementById('singleFilterOutliers').addEventListener('change', updateSingleView);
+        document.getElementById('smoothing').addEventListener('change', renderPlot);
 
         document.getElementById('compareColorscale').addEventListener('change', renderComparePlot);
         document.getElementById('comparePlotType').addEventListener('change', renderComparePlot);
         document.getElementById('filterOutliers').addEventListener('change', updateCompareView);
+        document.getElementById('compareSmoothing').addEventListener('change', renderComparePlot);
 
         // Single file upload
         document.getElementById('singleUploadBtn').addEventListener('click', () => {
